@@ -5,6 +5,7 @@
 import threading
 from queue import Queue
 from urllib.parse import urljoin
+from urllib.request import urlretrieve
 from collections import defaultdict
 
 import requests
@@ -21,7 +22,7 @@ urlq = Queue()
 UniqueURLs = defaultdict(int)
 
 # LIMIT=5 Crawls only 5 links in a Queue.put LIMIT=-1 to crawl untill the end is reached
-LIMIT = 5
+LIMIT = -1
 
 lock = threading.RLock()                                                  
 
@@ -66,6 +67,12 @@ class LinkCrawler(threading.Thread):
                         continue
 
                     if lnk.startswith('http:') or lnk.startswith('https:'):
+
+                        if lnk.lower().endswith('.pdf'):
+                            # Lets download the resource
+                            filename = lnk.split('/')[-1]
+                            urlretrieve(lnk, f"data/{filename}")
+                        
                         print(f"Normal links {lnk}")
                         self.urlq.put(lnk)
 
@@ -89,7 +96,7 @@ class LinkCrawler(threading.Thread):
                 self.UniqueURLs[link] = 1
                 print(link)
 
-                if len(self.UniqueURLs) > LIMIT:
+                if (len(self.UniqueURLs) > LIMIT) and LIMIT != -1:
                     # Set CRAWL to false to stop further crawling
                     self.CRAWL = False
                     print("LIMIT has reached The rest of the unique URLs will be added to the dictionary and saved!")
@@ -121,6 +128,6 @@ urlq.join()
 # Write the Unique links into a file or do other processing work
 f = open("CrawlData.txt", 'wb')
 for link in UniqueURLs:
-    f.write(link+"\r\n")
+    f.write(f"{link}\r\n".encode('utf-8'))
 
 f.close()
